@@ -7,6 +7,7 @@ const UserSchema: Schema = new Schema<UserType>(
     email: { type: String, required: true, unique: true },
     phoneNumber: { type: String }, // optional
     password: { type: String, required: true },
+    profilePictureUrl: { type: String },
     role: {
       type: String,
       enum: ["USER", "ADMIN"],
