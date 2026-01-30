@@ -1,8 +1,12 @@
 import express from "express";
 import cors from "cors";
+import path from "path";
 import { PORT } from "./config";
 import { connectDatabase } from "./database/mongodb";
-import router from "./routes/auth.route";
+
+// Routes
+import authRouter from "./routes/auth.route";
+import adminUserRouter from "./routes/admin/user.route";
 
 const app = express();
 
@@ -16,14 +20,16 @@ const corsOptions = {
 };
 
 app.use(cors(corsOptions));
-
 app.use(express.json());
+
+app.use("/uploads", express.static(path.join(__dirname, "../uploads")));
 
 app.get("/test", (req, res) => {
   return res.status(200).json({ success: "true", message: "Welcome." });
 });
 
-app.use("/api/auth", router);
+app.use("/api/auth", authRouter);
+app.use("/api/admin/users", adminUserRouter);
 
 async function startServer() {
   await connectDatabase();
