@@ -1,4 +1,4 @@
-import { CreateUserDTO, LoginUserDTO } from "../dtos/user.dto";
+import { CreateUserDTO, LoginUserDTO, UpdateUserDTO } from "../dtos/user.dto";
 import { UserRepository } from "../repositories/user.repository";
 import bcryptjs from "bcryptjs";
 import { HttpError } from "../errors/http.error";
@@ -61,5 +61,53 @@ export class UserService {
       token,
       user,
     };
+  }
+
+  async getProfile(userId: string) {
+    const user = await userRepository.getUserById(userId);
+    if (!user) {
+      throw new HttpError(404, "User not found");
+    }
+    return user;
+  }
+
+  async updateProfile(
+    userId: string,
+    updateData: UpdateUserDTO,
+    file?: Express.Multer.File
+  ) {
+    const user = await userRepository.getUserById(userId);
+    if (!user) {
+      throw new HttpError(404, "User not found");
+    }
+
+    if (file) {
+      updateData.profilePictureUrl = `/uploads/users/${file.filename}`;
+    }
+
+    return await userRepository.updateUser(userId, updateData);
+  }
+
+  async uploadProfilePicture(userId: string, file: Express.Multer.File) {
+    if (!file) {
+      throw new HttpError(400, "Profile picture is required");
+    }
+
+    const profilePictureUrl = `/uploads/users/${file.filename}`;
+
+    return await userRepository.updateUser(userId, {
+      profilePictureUrl,
+    });
+  }
+
+
+  async deleteAccount(userId: string) {
+    const user = await userRepository.getUserById(userId);
+    if (!user) {
+      throw new HttpError(404, "User not found");
+    }
+
+    await userRepository.deleteUser(userId);
+    return true;
   }
 }
