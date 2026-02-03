@@ -115,11 +115,13 @@ export class AuthController {
         req.user!._id.toString(),
         req.file!
       );
-
+  
+      const profilePictureUrl = `${req.protocol}://${req.get("host")}${user.profilePictureUrl}`;
+  
       return res.status(200).json({
         success: true,
         message: "Profile picture uploaded",
-        data: user,
+        data: profilePictureUrl,
       });
     } catch (err: any) {
       return res.status(err.statusCode || 500).json({
@@ -127,7 +129,6 @@ export class AuthController {
         message: err.message,
       });
     }
-
   }
 
   async deleteAccount(req: Request, res: Response) {

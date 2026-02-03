@@ -8,7 +8,6 @@ import { JWT_SECRET } from "../config";
 const userRepository = new UserRepository();
 
 export class UserService {
-
   async createUser(data: CreateUserDTO) {
     // Check if email already exists
     const existingUser = await userRepository.getUserByEmail(data.email);
@@ -95,11 +94,16 @@ export class UserService {
 
     const profilePictureUrl = `/uploads/users/${file.filename}`;
 
-    return await userRepository.updateUser(userId, {
+    const updatedUser = await userRepository.updateUser(userId, {
       profilePictureUrl,
     });
-  }
 
+    if (!updatedUser) {
+      throw new HttpError(500, "Failed to update profile picture");
+    }
+
+    return updatedUser;
+  }
 
   async deleteAccount(userId: string) {
     const user = await userRepository.getUserById(userId);
