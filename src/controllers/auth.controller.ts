@@ -6,7 +6,6 @@ import z from "zod";
 const userService = new UserService();
 
 export class AuthController {
-
   async register(req: Request, res: Response) {
     try {
       // Validate request body
@@ -15,7 +14,7 @@ export class AuthController {
       if (!parsedData.success) {
         return res.status(400).json({
           success: false,
-          message: z.prettifyError(parsedData.error)
+          message: z.prettifyError(parsedData.error),
         });
       }
 
@@ -27,7 +26,6 @@ export class AuthController {
         message: "User Created Successfully.",
         data: newUser,
       });
-
     } catch (error: any) {
       return res.status(error.statusCode ?? 500).json({
         success: false,
@@ -43,7 +41,7 @@ export class AuthController {
       if (!parsedData.success) {
         return res.status(400).json({
           success: false,
-          message: z.prettifyError(parsedData.error)
+          message: z.prettifyError(parsedData.error),
         });
       }
 
@@ -56,7 +54,6 @@ export class AuthController {
         token,
         data: user,
       });
-
     } catch (error: any) {
       return res.status(error.statusCode ?? 500).json({
         success: false,
@@ -115,9 +112,11 @@ export class AuthController {
         req.user!._id.toString(),
         req.file!
       );
-  
-      const profilePictureUrl = `${req.protocol}://${req.get("host")}${user.profilePictureUrl}`;
-  
+
+      const profilePictureUrl = `${req.protocol}://${req.get("host")}${
+        user.profilePictureUrl
+      }`;
+
       return res.status(200).json({
         success: true,
         message: "Profile picture uploaded",
@@ -143,6 +142,24 @@ export class AuthController {
       return res.status(err.statusCode || 500).json({
         success: false,
         message: err.message,
+      });
+    }
+  }
+
+  async sendResetPasswordEmail(req: Request, res: Response) {
+    try {
+      const { email } = req.body;
+
+      await userService.sendResetPasswordEmail(email);
+
+      return res.status(200).json({
+        success: true,
+        message: "If the email is registered, a reset link has been sent.",
+      });
+    } catch (error: any) {
+      return res.status(error.statusCode ?? 500).json({
+        success: false,
+        message: error.message || "Internal Server Error",
       });
     }
   }

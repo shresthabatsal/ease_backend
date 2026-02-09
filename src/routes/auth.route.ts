@@ -33,6 +33,11 @@ router.post(
   uploads.single("profilePicture"),
   authController.uploadProfilePicture
 );
-router.delete("/delete-account", authorizedMiddleware, authController.deleteAccount);
+router.delete(
+  "/delete-account",
+  authorizedMiddleware,
+  authController.deleteAccount
+);
+router.post("/request-password-reset", authController.sendResetPasswordEmail);
 
 export default router;

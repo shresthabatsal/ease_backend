@@ -3,7 +3,8 @@ import { UserRepository } from "../repositories/user.repository";
 import bcryptjs from "bcryptjs";
 import { HttpError } from "../errors/http.error";
 import jwt from "jsonwebtoken";
-import { JWT_SECRET } from "../config";
+import { CLIENT_URL, JWT_SECRET } from "../config";
+import { sendEmail } from "../config/email";
 
 const userRepository = new UserRepository();
 
@@ -113,5 +114,33 @@ export class UserService {
 
     await userRepository.deleteUser(userId);
     return true;
+  }
+
+  async sendResetPasswordEmail(email?: string) {
+    if (!email) {
+      throw new HttpError(400, "Email is required");
+    }
+
+    const user = await userRepository.getUserByEmail(email);
+    if (!user) {
+      // Security best practice: don't reveal existence
+      return;
+    }
+
+    const token = jwt.sign({ id: user._id }, JWT_SECRET, { expiresIn: "1h" });
+
+    const resetLink = `${CLIENT_URL}/reset-password?token=${token}`;
+
+    const html = `
+      <p>You requested a password reset.</p>
+      <p>
+        Click <a href="${resetLink}">here</a> to reset your password.
+      </p>
+      <p>This link will expire in 1 hour.</p>
+    `;
+
+    await sendEmail(user.email, "Password Reset", html);
+
+    return { user };
   }
 }
