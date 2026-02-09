@@ -5,14 +5,17 @@ export interface IUserRepository {
 
   getUserById(id: string): Promise<IUser | null>;
   getUserByEmail(email: string): Promise<IUser | null>;
-  getAllUsers(): Promise<IUser[]>;
-  
+  getAllUsers(params: {
+    page: number;
+    size: number;
+    search?: string;
+  }): Promise<{ users: IUser[]; totalUsers: number }>;
+
   updateUser(id: string, updateData: Partial<IUser>): Promise<IUser | null>;
   deleteUser(id: string): Promise<boolean>;
 }
 
 export class UserRepository implements IUserRepository {
-
   async createUser(userData: Partial<IUser>): Promise<IUser> {
     const user = new UserModel(userData);
     return await user.save();
@@ -26,19 +29,41 @@ export class UserRepository implements IUserRepository {
     return await UserModel.findById(id);
   }
 
-  async getAllUsers(): Promise<IUser[]> {
-    return await UserModel.find();
+  async getAllUsers({
+    page,
+    size,
+    search,
+  }: {
+    page: number;
+    size: number;
+    search?: string;
+  }): Promise<{ users: IUser[]; totalUsers: number }> {
+    let filter: any = {};
+
+    if (search) {
+      filter.$or = [
+        { email: { $regex: search, $options: "i" } },
+        { username: { $regex: search, $options: "i" } },
+      ];
+    }
+
+    const [users, totalUsers] = await Promise.all([
+      UserModel.find(filter)
+        .skip((page - 1) * size)
+        .limit(size)
+        .sort({ createdAt: -1 }),
+
+      UserModel.countDocuments(filter),
+    ]);
+
+    return { users, totalUsers };
   }
 
   async updateUser(
     id: string,
     updateData: Partial<IUser>
   ): Promise<IUser | null> {
-    return await UserModel.findByIdAndUpdate(
-      id,
-      updateData,
-      { new: true }
-    );
+    return await UserModel.findByIdAndUpdate(id, updateData, { new: true });
   }
 
   async deleteUser(id: string): Promise<boolean> {

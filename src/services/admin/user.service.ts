@@ -25,9 +25,29 @@ export class AdminUserService {
     return newUser;
   }
 
-  async getAllUsers() {
-    const users = await userRepository.getAllUsers();
-    return users;
+  async getAllUsers(params: { page?: string; size?: string; search?: string }) {
+    const currentPage =
+      params.page && parseInt(params.page) > 0 ? parseInt(params.page) : 1;
+
+    const currentSize =
+      params.size && parseInt(params.size) > 0 ? parseInt(params.size) : 10;
+
+    const currentSearch = params.search?.trim() || "";
+
+    const { users, totalUsers } = await userRepository.getAllUsers({
+      page: currentPage,
+      size: currentSize,
+      search: currentSearch,
+    });
+
+    const pagination = {
+      page: currentPage,
+      size: currentSize,
+      total: totalUsers,
+      totalPages: Math.ceil(totalUsers / currentSize),
+    };
+
+    return { users, pagination };
   }
 
   async getUserById(id: string) {
