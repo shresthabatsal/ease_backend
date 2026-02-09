@@ -39,5 +39,6 @@ router.delete(
   authController.deleteAccount
 );
 router.post("/request-password-reset", authController.sendResetPasswordEmail);
+router.post("/reset-password", authController.resetPassword);
 
 export default router;

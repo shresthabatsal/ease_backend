@@ -143,4 +143,29 @@ export class UserService {
 
     return { user };
   }
+
+  async resetPassword(token?: string, newPassword?: string) {
+    if (!token || !newPassword) {
+      throw new HttpError(400, "Token and new password are required");
+    }
+
+    try {
+      const decoded: any = jwt.verify(token, JWT_SECRET);
+
+      const user = await userRepository.getUserById(decoded.id);
+      if (!user) {
+        throw new HttpError(404, "User not found");
+      }
+
+      const hashedPassword = await bcryptjs.hash(newPassword, 10);
+
+      await userRepository.updateUser(user._id.toString(), {
+        password: hashedPassword,
+      });
+
+      return true;
+    } catch (error) {
+      throw new HttpError(400, "Invalid or expired token");
+    }
+  }
 }
