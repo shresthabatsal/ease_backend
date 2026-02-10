@@ -35,7 +35,16 @@ export const authorizedMiddleware = async (
     }
 
     // Verify token
-    const decoded = jwt.verify(token, JWT_SECRET) as { userId: string };
+    let decoded;
+    try {
+      decoded = jwt.verify(token, JWT_SECRET) as { userId: string };
+    } catch (jwtError) {
+      // Handle JWT-specific errors
+      return res.status(401).json({
+        success: false,
+        message: "Invalid or expired token",
+      });
+    }
 
     if (!decoded?.userId) {
       throw new HttpError(401, "Unauthorized: Token verification failed");
@@ -48,17 +57,22 @@ export const authorizedMiddleware = async (
     }
 
     req.user = user;
-
-    return next();
+    next(); // Just call next(), don't return it
   } catch (err: any) {
-    return res.status(err.statusCode || 500).json({
+    // Pass HttpError to the next middleware
+    if (err instanceof HttpError) {
+      return next(err);
+    }
+
+    // For unexpected errors
+    return res.status(500).json({
       success: false,
-      message: err.message || "Internal Server Error",
+      message: "Internal Server Error",
     });
   }
 };
 
-export const adminMiddleware = async (
+export const adminMiddleware = (
   req: Request,
   res: Response,
   next: NextFunction
@@ -73,11 +87,19 @@ export const adminMiddleware = async (
       throw new HttpError(403, "Forbidden: Admin access only");
     }
 
-    return next();
+    next();
   } catch (err: any) {
-    return res.status(err.statusCode || 500).json({
+    if (err instanceof HttpError) {
+      return res.status(err.statusCode).json({
+        success: false,
+        message: err.message,
+      });
+    }
+
+    // For unexpected errors
+    return res.status(500).json({
       success: false,
-      message: err.message || "Internal Server Error",
+      message: "Internal Server Error",
     });
   }
 };
