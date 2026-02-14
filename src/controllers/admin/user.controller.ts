@@ -42,12 +42,20 @@ export class AdminUserController {
 
   async getAllUsers(req: Request, res: Response, next: NextFunction) {
     try {
-      const { page, size, search } = req.query;
+      const {
+        page = "1",
+        size = "20",
+        search = "",
+        sortBy = "fullName",
+        sortOrder = "asc",
+      } = req.query;
 
       const { users, pagination } = await adminUserService.getAllUsers({
         page: page as string,
         size: size as string,
         search: search as string,
+        sortBy: sortBy as string,
+        sortOrder: sortOrder as "asc" | "desc",
       });
 
       return res.status(200).json({

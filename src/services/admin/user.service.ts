@@ -25,7 +25,13 @@ export class AdminUserService {
     return newUser;
   }
 
-  async getAllUsers(params: { page?: string; size?: string; search?: string }) {
+  async getAllUsers(params: {
+    page?: string;
+    size?: string;
+    search?: string;
+    sortBy?: string;
+    sortOrder?: "asc" | "desc";
+  }) {
     const currentPage =
       params.page && parseInt(params.page) > 0 ? parseInt(params.page) : 1;
 
@@ -34,10 +40,20 @@ export class AdminUserService {
 
     const currentSearch = params.search?.trim() || "";
 
+    const allowedSortFields = ["fullName", "email", "role", "createdAt"];
+
+    const currentSortBy = allowedSortFields.includes(params.sortBy || "")
+      ? params.sortBy!
+      : "createdAt";
+
+    const currentSortOrder = params.sortOrder === "asc" ? "asc" : "desc";
+
     const { users, totalUsers } = await userRepository.getAllUsers({
       page: currentPage,
       size: currentSize,
       search: currentSearch,
+      sortBy: currentSortBy,
+      sortOrder: currentSortOrder,
     });
 
     const pagination = {

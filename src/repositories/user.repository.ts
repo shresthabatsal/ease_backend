@@ -33,10 +33,14 @@ export class UserRepository implements IUserRepository {
     page,
     size,
     search,
+    sortBy,
+    sortOrder,
   }: {
     page: number;
     size: number;
     search?: string;
+    sortBy: string;
+    sortOrder: "asc" | "desc";
   }): Promise<{ users: IUser[]; totalUsers: number }> {
     let filter: any = {};
 
@@ -47,11 +51,13 @@ export class UserRepository implements IUserRepository {
       ];
     }
 
+    const sortDirection = sortOrder === "asc" ? 1 : -1;
+
     const [users, totalUsers] = await Promise.all([
       UserModel.find(filter)
+        .sort({ [sortBy]: sortDirection })
         .skip((page - 1) * size)
-        .limit(size)
-        .sort({ createdAt: -1 }),
+        .limit(size),
 
       UserModel.countDocuments(filter),
     ]);
