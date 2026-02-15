@@ -1,12 +1,11 @@
 import express from "express";
 import cors from "cors";
 import path from "path";
-import { PORT } from "./config";
-import { connectDatabase } from "./database/mongodb";
 
 // Routes
 import authRouter from "./routes/auth.route";
 import adminUserRouter from "./routes/admin/user.route";
+import storeRouter from "./routes/admin/store.route";
 
 const app = express();
 
@@ -30,5 +29,6 @@ app.get("/test", (req, res) => {
 
 app.use("/api/auth", authRouter);
 app.use("/api/admin/users", adminUserRouter);
+app.use("/api/admin/stores", storeRouter);
 
 export default app;
