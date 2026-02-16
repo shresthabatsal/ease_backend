@@ -8,6 +8,7 @@ import adminUserRouter from "./routes/admin/user.route";
 import storeRouter from "./routes/admin/store.route";
 import categoryRouter from "./routes/admin/category.route";
 import subcategoryRouter from "./routes/admin/subcategory.route";
+import productRouter from "./routes/admin/product.route";
 
 const app = express();
 
@@ -34,5 +35,6 @@ app.use("/api/admin/users", adminUserRouter);
 app.use("/api/admin/stores", storeRouter);
 app.use("/api/admin/categories", categoryRouter);
 app.use("/api/admin/subcategories", subcategoryRouter);
+app.use("/api/admin/products", productRouter);
 
 export default app;
