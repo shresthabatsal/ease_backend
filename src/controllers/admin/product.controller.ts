@@ -37,12 +37,27 @@ export class ProductController {
 
   async getAllProducts(req: Request, res: Response, next: NextFunction) {
     try {
-      const products = await productService.getAllProducts();
+      const {
+        page = "1",
+        size = "10",
+        search = "",
+        sortBy = "name",
+        sortOrder = "asc",
+      } = req.query;
+
+      const { products, pagination } = await productService.getAllProducts({
+        page: page as string,
+        size: size as string,
+        search: search as string,
+        sortBy: sortBy as string,
+        sortOrder: sortOrder as "asc" | "desc",
+      });
 
       return res.status(200).json({
         success: true,
         message: "Products retrieved successfully",
         data: products,
+        pagination,
       });
     } catch (error: any) {
       return res.status(error.statusCode ?? 500).json({

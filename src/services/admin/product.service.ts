@@ -44,8 +44,41 @@ export class ProductService {
     return await productRepository.createProduct(productData);
   }
 
-  async getAllProducts() {
-    return await productRepository.getAllProducts();
+  async getAllProducts(params: {
+    page?: string;
+    size?: string;
+    search?: string;
+    sortBy?: string;
+    sortOrder?: "asc" | "desc";
+  }) {
+    const currentPage =
+      params.page && parseInt(params.page) > 0 ? parseInt(params.page) : 1;
+    const currentSize =
+      params.size && parseInt(params.size) > 0 ? parseInt(params.size) : 10;
+    const currentSearch = params.search?.trim() || "";
+
+    const allowedSortFields = ["name", "price", "createdAt"];
+    const currentSortBy = allowedSortFields.includes(params.sortBy || "")
+      ? params.sortBy!
+      : "createdAt";
+    const currentSortOrder = params.sortOrder === "asc" ? "asc" : "desc";
+
+    const { products, totalProducts } = await productRepository.getAllProducts({
+      page: currentPage,
+      size: currentSize,
+      search: currentSearch,
+      sortBy: currentSortBy,
+      sortOrder: currentSortOrder,
+    });
+
+    const pagination = {
+      page: currentPage,
+      size: currentSize,
+      total: totalProducts,
+      totalPages: Math.ceil(totalProducts / currentSize),
+    };
+
+    return { products, pagination };
   }
 
   async getProductById(id: string) {
