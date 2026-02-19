@@ -12,6 +12,8 @@ import subcategoryRouter from "./routes/admin/subcategory.route";
 import productRouter from "./routes/admin/product.route";
 import adminOrderRouter from "./routes/admin/order.route";
 
+import cartRouter from "./routes/cart.route";
+
 const app = express();
 
 const corsOptions = {
@@ -40,5 +42,7 @@ app.use("/api/admin/categories", categoryRouter);
 app.use("/api/admin/subcategories", subcategoryRouter);
 app.use("/api/admin/products", productRouter);
 app.use("/api/admin", adminOrderRouter);
+
+app.use("/api/user/cart", cartRouter);
 
 export default app;
