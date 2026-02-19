@@ -13,6 +13,7 @@ import productRouter from "./routes/admin/product.route";
 import adminOrderRouter from "./routes/admin/order.route";
 
 import cartRouter from "./routes/cart.route";
+import orderRouter from "./routes/order.route";
 
 const app = express();
 
@@ -44,5 +45,6 @@ app.use("/api/admin/products", productRouter);
 app.use("/api/admin", adminOrderRouter);
 
 app.use("/api/user/cart", cartRouter);
+app.use("/api/user/orders", orderRouter);
 
 export default app;
