@@ -38,7 +38,7 @@ export class ProductService {
 
     const productData: any = {
       ...data,
-      productImage: `/uploads/products/${file.filename}`,
+      productImage: `/uploads/users/${file.filename}`,
     };
 
     return await productRepository.createProduct(productData);
@@ -134,7 +134,7 @@ export class ProductService {
 
     const updateData: any = { ...data };
     if (file) {
-      updateData.productImage = `/uploads/products/${file.filename}`;
+      updateData.productImage = `/uploads/users/${file.filename}`;
     }
 
     return await productRepository.updateProduct(id, updateData);
