@@ -14,6 +14,7 @@ import adminOrderRouter from "./routes/admin/order.route";
 
 import cartRouter from "./routes/cart.route";
 import orderRouter from "./routes/order.route";
+import paymentRouter from "./routes/payment.route";
 
 const app = express();
 
@@ -46,5 +47,6 @@ app.use("/api/admin", adminOrderRouter);
 
 app.use("/api/user/cart", cartRouter);
 app.use("/api/user/orders", orderRouter);
+app.use("/api/user/payments", paymentRouter);
 
 export default app;
