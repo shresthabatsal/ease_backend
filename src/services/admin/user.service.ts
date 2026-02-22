@@ -85,6 +85,11 @@ export class AdminUserService {
       updateData.profilePictureUrl = `/uploads/users/${file.filename}`;
     }
 
+    // Hash password
+    if (updateData.password) {
+      updateData.password = await bcryptjs.hash(updateData.password, 10);
+    }
+
     const updatedUser = await userRepository.updateUser(id, updateData);
     return updatedUser;
   }

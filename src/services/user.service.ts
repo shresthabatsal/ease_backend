@@ -85,6 +85,11 @@ export class UserService {
       updateData.profilePictureUrl = `/uploads/users/${file.filename}`;
     }
 
+    // Hash password
+    if (updateData.password) {
+      updateData.password = await bcryptjs.hash(updateData.password, 10);
+    }
+
     return await userRepository.updateUser(userId, updateData);
   }
 
