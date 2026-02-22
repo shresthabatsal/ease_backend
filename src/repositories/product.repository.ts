@@ -11,6 +11,14 @@ export interface IProductRepository {
   }): Promise<{ products: IProduct[]; totalProducts: number }>;
   getProductById(id: string): Promise<IProduct | null>;
   getProductsByStore(storeId: string): Promise<IProduct[]>;
+  getProductsByStoreAndCategory(
+    storeId: string,
+    categoryId: string
+  ): Promise<IProduct[]>;
+  getProductsByStoreAndSubcategory(
+    storeId: string,
+    subcategoryId: string
+  ): Promise<IProduct[]>;
   updateProduct(id: string, data: Partial<IProduct>): Promise<IProduct | null>;
   deleteProduct(id: string): Promise<boolean>;
 }
@@ -62,6 +70,26 @@ export class ProductRepository implements IProductRepository {
 
   async getProductsByStore(storeId: string): Promise<IProduct[]> {
     return await ProductModel.find({ storeId })
+      .populate("categoryId")
+      .populate("subcategoryId")
+      .populate("storeId");
+  }
+
+  async getProductsByStoreAndCategory(
+    storeId: string,
+    categoryId: string
+  ): Promise<IProduct[]> {
+    return await ProductModel.find({ storeId, categoryId })
+      .populate("categoryId")
+      .populate("subcategoryId")
+      .populate("storeId");
+  }
+
+  async getProductsByStoreAndSubcategory(
+    storeId: string,
+    subcategoryId: string
+  ): Promise<IProduct[]> {
+    return await ProductModel.find({ storeId, subcategoryId })
       .populate("categoryId")
       .populate("subcategoryId")
       .populate("storeId");
