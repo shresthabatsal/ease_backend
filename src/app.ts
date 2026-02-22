@@ -17,6 +17,7 @@ import orderRouter from "./routes/order.route";
 import paymentRouter from "./routes/payment.route";
 
 import userStoreRouter from "./routes/store.route";
+import userCategoryRouter from "./routes/category.route";
 
 const app = express();
 
@@ -52,5 +53,6 @@ app.use("/api/user/orders", orderRouter);
 app.use("/api/user/payments", paymentRouter);
 
 app.use("/api/user/stores", userStoreRouter);
+app.use("/api/user/categories", userCategoryRouter);
 
 export default app;
