@@ -16,6 +16,8 @@ import cartRouter from "./routes/cart.route";
 import orderRouter from "./routes/order.route";
 import paymentRouter from "./routes/payment.route";
 
+import userStoreRouter from "./routes/store.route";
+
 const app = express();
 
 const corsOptions = {
@@ -48,5 +50,7 @@ app.use("/api/admin", adminOrderRouter);
 app.use("/api/user/cart", cartRouter);
 app.use("/api/user/orders", orderRouter);
 app.use("/api/user/payments", paymentRouter);
+
+app.use("/api/user/stores", userStoreRouter);
 
 export default app;
