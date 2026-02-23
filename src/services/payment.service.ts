@@ -2,18 +2,26 @@ import { PaymentRepository } from "../repositories/payment.repository";
 import { OrderRepository } from "../repositories/order.repository";
 import { HttpError } from "../errors/http.error";
 import {
-  CreatePaymentDTOType,
-  UpdatePaymentStatusDTOType,
+  SubmitPaymentReceiptDTOType,
+  VerifyPaymentDTOType,
+  GetPaymentsFilterDTOType,
 } from "../dtos/payment.dto";
-import crypto from "crypto";
 import mongoose from "mongoose";
 import { ProductModel } from "../models/product.model";
 
 const paymentRepository = new PaymentRepository();
 const orderRepository = new OrderRepository();
 
+function generateOTP(): string {
+  return Math.floor(100000 + Math.random() * 900000).toString();
+}
+
 export class PaymentService {
-  async createPayment(userId: string, data: CreatePaymentDTOType) {
+  async submitPaymentReceipt(
+    userId: string,
+    data: SubmitPaymentReceiptDTOType,
+    file?: Express.Multer.File
+  ) {
     const order = await orderRepository.getOrderById(data.orderId);
     if (!order) {
       throw new HttpError(404, "Order not found");
@@ -27,28 +35,31 @@ export class PaymentService {
       throw new HttpError(403, "Unauthorized access to order");
     }
 
-    if (order.status === "CANCELLED") {
-      throw new HttpError(400, "Cannot pay for cancelled order");
+    if (order.paymentMethod !== "ONLINE") {
+      throw new HttpError(400, "This order does not require online payment");
     }
 
-    if (order.paymentStatus === "COMPLETED") {
-      throw new HttpError(400, "Payment already completed for this order");
+    if (order.paymentStatus === "VERIFIED") {
+      throw new HttpError(
+        400,
+        "Payment for this order has already been verified"
+      );
     }
 
-    // Only allow ESEWA and KHALTI for online payment
-    if (data.method !== "ESEWA" && data.method !== "KHALTI") {
-      throw new HttpError(400, "Invalid payment method");
+    if (!file) {
+      throw new HttpError(400, "Receipt image is required");
     }
 
-    const transactionId = this.generateTransactionId();
+    const receiptImage = `/uploads/payments/${file.filename}`;
 
     const payment = await paymentRepository.createPayment({
       orderId: new mongoose.Types.ObjectId(data.orderId),
       userId: new mongoose.Types.ObjectId(userId),
       amount: order.totalAmount,
-      method: data.method,
+      paymentMethod: data.paymentMethod || "Online Transfer",
+      receiptImage,
+      notes: data.notes,
       status: "PENDING",
-      transactionId,
     });
 
     return payment;
@@ -70,72 +81,111 @@ export class PaymentService {
     return payment;
   }
 
-  async updatePaymentStatus(id: string, data: UpdatePaymentStatusDTOType) {
-    const payment = await paymentRepository.getPaymentById(id);
-    if (!payment) {
-      throw new HttpError(404, "Payment not found");
-    }
-
-    const updatedPayment = await paymentRepository.updatePaymentStatus(id, {
-      status: data.status,
-      transactionId: data.transactionId,
-    });
-
-    if (data.status === "COMPLETED") {
-      // Update order payment status and confirm order
-      const orderId =
-        payment.orderId instanceof mongoose.Types.ObjectId
-          ? payment.orderId.toString()
-          : (payment.orderId as any)._id.toString();
-
-      const order = await orderRepository.getOrderById(orderId);
-
-      if (order) {
-        await orderRepository.updateOrder(order._id.toString(), {
-          paymentStatus: "COMPLETED",
-          status: "CONFIRMED",
-        });
-      }
-    }
-
-    if (data.status === "FAILED") {
-      // Restore product quantities on payment failure
-      const orderId =
-        payment.orderId instanceof mongoose.Types.ObjectId
-          ? payment.orderId.toString()
-          : (payment.orderId as any)._id.toString();
-
-      const order = await orderRepository.getOrderById(orderId);
-
-      if (order) {
-        for (const item of order.items) {
-          const product = await ProductModel.findById(item.productId);
-          if (product) {
-            await ProductModel.findByIdAndUpdate(product._id, {
-              quantity: product.quantity + item.quantity,
-            });
-          }
-        }
-
-        // Cancel order if payment fails
-        await orderRepository.updateOrder(order._id.toString(), {
-          paymentStatus: "FAILED",
-          status: "CANCELLED",
-        });
-      }
-    }
-
-    return updatedPayment;
-  }
-
   async getUserPayments(userId: string) {
     return await paymentRepository.getUserPayments(userId);
   }
 
-  private generateTransactionId(): string {
-    return `TXN${Date.now()}${crypto
-      .randomBytes(4)
-      .toString("hex")
-      .toUpperCase()}`;
+  async getRejectedPayments(orderId: string) {
+    return await paymentRepository.getRejectedPaymentsByOrder(orderId);
+  }
+
+  // Admin Methods
+  async getPendingPayments() {
+    return await paymentRepository.getPendingPayments();
+  }
+
+  async getAllPayments(filters: GetPaymentsFilterDTOType) {
+    const page = parseInt(filters.page || "1");
+    const limit = parseInt(filters.limit || "10");
+    const sortBy = filters.sortBy || "createdAt";
+    const sortOrder = filters.sortOrder || "desc";
+
+    if (page < 1) {
+      throw new HttpError(400, "Page must be greater than 0");
+    }
+
+    if (limit < 1 || limit > 100) {
+      throw new HttpError(400, "Limit must be between 1 and 100");
+    }
+
+    return await paymentRepository.getAllPayments({
+      status: filters.status,
+      page,
+      limit,
+      sortBy,
+      sortOrder: sortOrder as "asc" | "desc",
+    });
+  }
+
+  async verifyPayment(
+    paymentId: string,
+    adminId: string,
+    data: VerifyPaymentDTOType
+  ) {
+    const payment = await paymentRepository.getPaymentById(paymentId);
+    if (!payment) {
+      throw new HttpError(404, "Payment not found");
+    }
+
+    if (payment.status !== "PENDING") {
+      throw new HttpError(400, "Payment has already been processed");
+    }
+
+    const orderId =
+      payment.orderId instanceof mongoose.Types.ObjectId
+        ? payment.orderId.toString()
+        : (payment.orderId as any)._id.toString();
+
+    const order = await orderRepository.getOrderById(orderId);
+
+    if (data.status === "VERIFIED") {
+      const otp = generateOTP();
+
+      const updatedPayment = await paymentRepository.updatePaymentStatus(
+        paymentId,
+        {
+          status: "VERIFIED",
+          verifiedBy: new mongoose.Types.ObjectId(adminId),
+          verifiedAt: new Date(),
+          verificationNotes: data.verificationNotes,
+        }
+      );
+
+      if (order) {
+        await orderRepository.updateOrder(order._id.toString(), {
+          paymentStatus: "VERIFIED",
+          status: "CONFIRMED",
+          otp: otp,
+        });
+      }
+
+      return {
+        payment: updatedPayment,
+        order: await orderRepository.getOrderById(orderId),
+        message: "Payment verified and OTP generated",
+      };
+    } else {
+      const updatedPayment = await paymentRepository.updatePaymentStatus(
+        paymentId,
+        {
+          status: "REJECTED",
+          verifiedBy: new mongoose.Types.ObjectId(adminId),
+          verifiedAt: new Date(),
+          verificationNotes: data.verificationNotes,
+        }
+      );
+
+      if (order) {
+        await orderRepository.updateOrder(order._id.toString(), {
+          paymentStatus: "FAILED",
+          otp: undefined,
+        });
+      }
+
+      return {
+        payment: updatedPayment,
+        message: "Payment rejected. User can resubmit receipt.",
+      };
+    }
   }
 }

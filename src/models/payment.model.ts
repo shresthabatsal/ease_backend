@@ -5,9 +5,14 @@ export interface IPayment extends Document {
   orderId: mongoose.Types.ObjectId;
   userId: mongoose.Types.ObjectId;
   amount: number;
-  method: "ESEWA" | "KHALTI";
-  status: "PENDING" | "COMPLETED" | "FAILED";
-  transactionId?: string;
+  paymentMethod?: string;
+  receiptImage: string;
+  notes?: string;
+  status: "PENDING" | "VERIFIED" | "REJECTED";
+  verificationNotes?: string;
+  verifiedBy?: mongoose.Types.ObjectId;
+  verifiedAt?: Date;
+  submittedAt: Date;
   createdAt: Date;
   updatedAt: Date;
 }
@@ -25,19 +30,27 @@ const PaymentSchema: Schema = new Schema<IPayment>(
       required: true,
     },
     amount: { type: Number, required: true },
-    method: {
-      type: String,
-      enum: ["ESEWA", "KHALTI"],
-      required: true,
-    },
+    paymentMethod: { type: String },
+    receiptImage: { type: String, required: true },
+    notes: { type: String },
     status: {
       type: String,
-      enum: ["PENDING", "COMPLETED", "FAILED"],
+      enum: ["PENDING", "VERIFIED", "REJECTED"],
       default: "PENDING",
     },
-    transactionId: { type: String },
+    verificationNotes: { type: String },
+    verifiedBy: {
+      type: Schema.Types.ObjectId,
+      ref: "User",
+    },
+    verifiedAt: { type: Date },
+    submittedAt: { type: Date, default: Date.now },
   },
   { timestamps: true }
 );
+
+PaymentSchema.index({ orderId: 1 });
+PaymentSchema.index({ userId: 1 });
+PaymentSchema.index({ status: 1 });
 
 export const PaymentModel = mongoose.model<IPayment>("Payment", PaymentSchema);
