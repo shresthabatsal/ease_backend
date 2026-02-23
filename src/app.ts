@@ -11,6 +11,7 @@ import categoryRouter from "./routes/admin/category.route";
 import subcategoryRouter from "./routes/admin/subcategory.route";
 import productRouter from "./routes/admin/product.route";
 import adminOrderRouter from "./routes/admin/order.route";
+import adminPaymentRouter from "./routes/admin/payment.route";
 
 import userProductRouter from "./routes/product.route";
 import cartRouter from "./routes/cart.route";
@@ -48,6 +49,7 @@ app.use("/api/admin/categories", categoryRouter);
 app.use("/api/admin/subcategories", subcategoryRouter);
 app.use("/api/admin/products", productRouter);
 app.use("/api/admin", adminOrderRouter);
+app.use("/api/admin/payments", adminPaymentRouter);
 
 app.use("/api/products", userProductRouter);
 app.use("/api/user/cart", cartRouter);
