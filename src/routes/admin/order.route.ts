@@ -14,6 +14,9 @@ router.use(adminMiddleware);
 router.get("/stores/:storeId/orders", (req, res, next) =>
   adminOrderController.getStoreOrders(req, res, next)
 );
+router.get("/:orderId", (req, res, next) =>
+  adminOrderController.getOrder(req, res, next)
+);
 router.get("/stores/:storeId/orders/status/:status", (req, res, next) =>
   adminOrderController.getOrdersByStatus(req, res, next)
 );

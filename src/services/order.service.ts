@@ -37,12 +37,7 @@ export class OrderService {
       throw new HttpError(400, "Cart is empty");
     }
 
-    return await this.processOrder(
-      userId,
-      cart,
-      data.storeId,
-      data.paymentMethod
-    );
+    return await this.processOrder(userId, cart, data.storeId);
   }
 
   async buyNow(userId: string, data: BuyNowDTOType) {
@@ -60,7 +55,6 @@ export class OrderService {
       throw new HttpError(404, "Store not found");
     }
 
-    // Create a temporary cart item structure
     const tempCart = [
       {
         productId: product,
@@ -68,19 +62,13 @@ export class OrderService {
       },
     ];
 
-    return await this.processOrder(
-      userId,
-      tempCart,
-      data.storeId,
-      data.paymentMethod
-    );
+    return await this.processOrder(userId, tempCart, data.storeId);
   }
 
   private async processOrder(
     userId: string,
     cartItems: any[],
-    storeId: string,
-    paymentMethod: string
+    storeId: string
   ) {
     let totalAmount = 0;
     const orderItems = [];
@@ -114,16 +102,6 @@ export class OrderService {
     }
 
     const pickupCode = generatePickupCode();
-    const otp = generateOTP();
-
-    let paymentStatus = "PENDING";
-    let orderStatus = "PENDING";
-
-    // Auto-confirm if payment method is CASH_ON_PICKUP
-    if (paymentMethod === "CASH_ON_PICKUP") {
-      paymentStatus = "COMPLETED";
-      orderStatus = "CONFIRMED";
-    }
 
     const order = await orderRepository.createOrder({
       userId: new mongoose.Types.ObjectId(userId),
@@ -135,15 +113,9 @@ export class OrderService {
       })),
       totalAmount,
       pickupCode,
-      otp,
-      paymentMethod: paymentMethod as "CASH_ON_PICKUP" | "ESEWA" | "KHALTI",
-      paymentStatus: paymentStatus as "PENDING" | "COMPLETED" | "FAILED",
-      status: orderStatus as
-        | "PENDING"
-        | "CONFIRMED"
-        | "READY_FOR_COLLECTION"
-        | "COLLECTED"
-        | "CANCELLED",
+      paymentMethod: "ONLINE",
+      paymentStatus: "PENDING",
+      status: "PENDING",
     });
 
     // Clear cart only if order was created from cart
@@ -227,6 +199,10 @@ export class OrderService {
     const order = await orderRepository.getOrderById(id);
     if (!order) {
       throw new HttpError(404, "Order not found");
+    }
+
+    if (!order.otp) {
+      throw new HttpError(400, "OTP has not been generated for this order");
     }
 
     if (order.otp !== data.otp) {

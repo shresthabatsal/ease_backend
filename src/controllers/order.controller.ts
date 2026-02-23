@@ -24,7 +24,7 @@ export class OrderController {
 
       return res.status(201).json({
         success: true,
-        message: "Order created successfully",
+        message: "Order created successfully. Please proceed with payment.",
         data: order,
       });
     } catch (error: any) {
@@ -53,7 +53,8 @@ export class OrderController {
 
       return res.status(201).json({
         success: true,
-        message: "Order created successfully via Buy Now",
+        message:
+          "Order created successfully via Buy Now. Please proceed with payment.",
         data: order,
       });
     } catch (error: any) {

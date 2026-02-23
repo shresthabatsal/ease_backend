@@ -11,9 +11,9 @@ export interface IOrder extends Document {
   }>;
   totalAmount: number;
   pickupCode: string;
-  otp: string;
-  paymentMethod: "CASH_ON_PICKUP" | "ESEWA" | "KHALTI";
-  paymentStatus: "PENDING" | "COMPLETED" | "FAILED";
+  otp?: string;
+  paymentMethod: "ONLINE";
+  paymentStatus: "PENDING" | "VERIFIED" | "FAILED";
   status:
     | "PENDING"
     | "CONFIRMED"
@@ -53,12 +53,13 @@ const OrderSchema: Schema = new Schema<IOrder>(
     otp: { type: String },
     paymentMethod: {
       type: String,
-      enum: ["CASH_ON_PICKUP", "ESEWA", "KHALTI"],
+      enum: ["ONLINE"],
+      default: "ONLINE",
       required: true,
     },
     paymentStatus: {
       type: String,
-      enum: ["PENDING", "COMPLETED", "FAILED"],
+      enum: ["PENDING", "VERIFIED", "FAILED"],
       default: "PENDING",
     },
     status: {

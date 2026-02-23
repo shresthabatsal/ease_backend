@@ -2,14 +2,12 @@ import z from "zod";
 
 export const CreateOrderDTO = z.object({
   storeId: z.string().min(1, "Store ID is required"),
-  paymentMethod: z.enum(["CASH_ON_PICKUP", "ESEWA", "KHALTI"]),
 });
 
 export const BuyNowDTO = z.object({
   productId: z.string().min(1, "Product ID is required"),
   quantity: z.number().positive("Quantity must be greater than 0"),
   storeId: z.string().min(1, "Store ID is required"),
-  paymentMethod: z.enum(["CASH_ON_PICKUP", "ESEWA", "KHALTI"]),
 });
 
 export const CancelOrderDTO = z.object({

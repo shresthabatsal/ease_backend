@@ -99,7 +99,14 @@ export class AdminOrderController {
 
   async getOrdersByStatus(req: Request, res: Response, next: NextFunction) {
     try {
-      const { status } = req.params;
+      const { status } = req.query;
+
+      if (!status) {
+        return res.status(400).json({
+          success: false,
+          message: "Status query parameter is required",
+        });
+      }
 
       const orders = await orderService.getOrdersByStatus(
         status as string,
@@ -110,6 +117,24 @@ export class AdminOrderController {
         success: true,
         message: "Orders retrieved by status",
         data: orders,
+      });
+    } catch (error: any) {
+      return res.status(error.statusCode ?? 500).json({
+        success: false,
+        message: error.message || "Internal Server Error",
+      });
+    }
+  }
+
+  async getOrder(req: Request, res: Response, next: NextFunction) {
+    try {
+      const { orderId } = req.params;
+      const order = await orderService.getOrderById(orderId);
+
+      return res.status(200).json({
+        success: true,
+        message: "Order retrieved",
+        data: order,
       });
     } catch (error: any) {
       return res.status(error.statusCode ?? 500).json({
