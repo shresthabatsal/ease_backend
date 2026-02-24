@@ -12,6 +12,9 @@ export interface IOrder extends Document {
   totalAmount: number;
   pickupCode: string;
   otp?: string;
+  notes?: string;
+  pickupDate: Date;
+  pickupTime: string;
   paymentMethod: "ONLINE";
   paymentStatus: "PENDING" | "VERIFIED" | "FAILED";
   status:
@@ -51,6 +54,16 @@ const OrderSchema: Schema = new Schema<IOrder>(
     totalAmount: { type: Number, required: true },
     pickupCode: { type: String, unique: true, required: true },
     otp: { type: String },
+    notes: { type: String },
+    pickupDate: {
+      type: Date,
+      required: true,
+    },
+    pickupTime: {
+      type: String,
+      required: true,
+      match: /^([0-1]?[0-9]|2[0-3]):[0-5][0-9]$/,
+    },
     paymentMethod: {
       type: String,
       enum: ["ONLINE"],
