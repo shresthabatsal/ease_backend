@@ -37,7 +37,14 @@ export class OrderService {
       throw new HttpError(400, "Cart is empty");
     }
 
-    return await this.processOrder(userId, cart, data.storeId);
+    return await this.processOrder(
+      userId,
+      cart,
+      data.storeId,
+      data.pickupDate,
+      data.pickupTime,
+      data.notes
+    );
   }
 
   async buyNow(userId: string, data: BuyNowDTOType) {
@@ -62,13 +69,23 @@ export class OrderService {
       },
     ];
 
-    return await this.processOrder(userId, tempCart, data.storeId);
+    return await this.processOrder(
+      userId,
+      tempCart,
+      data.storeId,
+      data.pickupDate,
+      data.pickupTime,
+      data.notes
+    );
   }
 
   private async processOrder(
     userId: string,
     cartItems: any[],
-    storeId: string
+    storeId: string,
+    pickupDate: string,
+    pickupTime: string,
+    notes?: string
   ) {
     let totalAmount = 0;
     const orderItems = [];
@@ -101,22 +118,52 @@ export class OrderService {
       });
     }
 
-    const pickupCode = generatePickupCode();
+    const pickupCodeStr = generatePickupCode();
 
-    const order = await orderRepository.createOrder({
+    // Parse pickup date properly
+    const pickupDateObj = new Date(pickupDate);
+    if (isNaN(pickupDateObj.getTime())) {
+      throw new HttpError(400, "Invalid pickup date format");
+    }
+
+    // Validate pickup time format
+    if (!/^([0-1]?[0-9]|2[0-3]):[0-5][0-9]$/.test(pickupTime)) {
+      throw new HttpError(
+        400,
+        "Invalid pickup time format. Use HH:MM (24-hour)"
+      );
+    }
+
+    const orderData: Partial<any> = {
       userId: new mongoose.Types.ObjectId(userId),
       storeId: new mongoose.Types.ObjectId(storeId),
       items: orderItems.map((item) => ({
-        productId: new mongoose.Types.ObjectId(item.productId),
+        productId: new mongoose.Types.ObjectId(
+          item.productId._id || item.productId
+        ),
         quantity: item.quantity,
         price: item.price,
       })),
       totalAmount,
-      pickupCode,
+      pickupCode: pickupCodeStr,
+      pickupDate: pickupDateObj,
+      pickupTime: pickupTime,
       paymentMethod: "ONLINE",
       paymentStatus: "PENDING",
       status: "PENDING",
-    });
+    };
+
+    // Add notes only if provided
+    if (notes) {
+      orderData.notes = notes;
+    }
+
+    console.log(
+      "Creating order with data:",
+      JSON.stringify(orderData, null, 2)
+    );
+
+    const order = await orderRepository.createOrder(orderData);
 
     // Clear cart only if order was created from cart
     if (cartItems.length > 0 && cartItems[0]._id) {
