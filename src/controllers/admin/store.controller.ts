@@ -17,7 +17,15 @@ export class StoreController {
         });
       }
 
-      const store = await storeService.createStore(parsedData.data, req.file);
+      const files = req.files as { [fieldname: string]: Express.Multer.File[] };
+      const storeImageFile = files?.storeImage?.[0];
+      const qrCodeFile = files?.paymentQRCode?.[0];
+
+      const store = await storeService.createStore(
+        parsedData.data,
+        storeImageFile,
+        qrCodeFile
+      );
 
       return res.status(201).json({
         success: true,
@@ -66,6 +74,36 @@ export class StoreController {
     }
   }
 
+  async getNearestStores(req: Request, res: Response, next: NextFunction) {
+    try {
+      const { latitude, longitude, maxDistance } = req.query;
+
+      if (!latitude || !longitude) {
+        return res.status(400).json({
+          success: false,
+          message: "Latitude and longitude are required",
+        });
+      }
+
+      const stores = await storeService.getNearestStores(
+        parseFloat(latitude as string),
+        parseFloat(longitude as string),
+        parseInt(maxDistance as string) || 50
+      );
+
+      return res.status(200).json({
+        success: true,
+        message: "Nearest stores retrieved successfully",
+        data: stores,
+      });
+    } catch (error: any) {
+      return res.status(error.statusCode ?? 500).json({
+        success: false,
+        message: error.message || "Internal Server Error",
+      });
+    }
+  }
+
   async updateStore(req: Request, res: Response, next: NextFunction) {
     try {
       const parsedData = UpdateStoreDTO.safeParse(req.body);
@@ -77,10 +115,15 @@ export class StoreController {
         });
       }
 
+      const files = req.files as { [fieldname: string]: Express.Multer.File[] };
+      const storeImageFile = files?.storeImage?.[0];
+      const qrCodeFile = files?.paymentQRCode?.[0];
+
       const store = await storeService.updateStore(
         req.params.id,
         parsedData.data,
-        req.file
+        storeImageFile,
+        qrCodeFile
       );
 
       return res.status(200).json({

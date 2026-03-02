@@ -13,8 +13,13 @@ router.use(authorizedMiddleware);
 router.use(adminMiddleware);
 
 // Create Store
-router.post("/", uploads.single("storeImage"), (req, res, next) =>
-  storeController.createStore(req, res, next)
+router.post(
+  "/",
+  uploads.fields([
+    { name: "storeImage", maxCount: 1 },
+    { name: "paymentQRCode", maxCount: 1 },
+  ]),
+  (req, res, next) => storeController.createStore(req, res, next)
 );
 
 // Get All Stores
@@ -28,8 +33,13 @@ router.get("/:id", (req, res, next) =>
 );
 
 // Update Store
-router.put("/:id", uploads.single("storeImage"), (req, res, next) =>
-  storeController.updateStore(req, res, next)
+router.put(
+  "/:id",
+  uploads.fields([
+    { name: "storeImage", maxCount: 1 },
+    { name: "paymentQRCode", maxCount: 1 },
+  ]),
+  (req, res, next) => storeController.updateStore(req, res, next)
 );
 
 // Delete Store
