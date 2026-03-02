@@ -2,6 +2,7 @@ import { OrderRepository } from "../repositories/order.repository";
 import { CartRepository } from "../repositories/cart.repository";
 import { ProductRepository } from "../repositories/product.repository";
 import { StoreRepository } from "../repositories/store.repository";
+import { NotificationService } from "./notification.service";
 import { HttpError } from "../errors/http.error";
 import {
   CreateOrderDTOType,
@@ -16,6 +17,13 @@ const orderRepository = new OrderRepository();
 const cartRepository = new CartRepository();
 const productRepository = new ProductRepository();
 const storeRepository = new StoreRepository();
+const notificationService = new NotificationService();
+
+let wsService: any;
+
+export function setOrderWebSocketService(ws: any) {
+  wsService = ws;
+}
 
 function generatePickupCode(): string {
   return Math.random().toString(36).substring(2, 10).toUpperCase();
@@ -23,6 +31,21 @@ function generatePickupCode(): string {
 
 function generateOTP(): string {
   return Math.floor(100000 + Math.random() * 900000).toString();
+}
+
+// Helper function to extract userId
+function extractUserId(userField: any): string {
+  if (!userField) return "";
+  if (typeof userField === "string") {
+    return userField;
+  }
+  if (userField._id) {
+    return userField._id.toString();
+  }
+  if (userField.toString) {
+    return userField.toString();
+  }
+  return "";
 }
 
 export class OrderService {
@@ -165,6 +188,45 @@ export class OrderService {
 
     const order = await orderRepository.createOrder(orderData);
 
+    // SEND ORDER CREATED NOTIFICATION
+    try {
+      console.log("Sending ORDER_CREATED notification to user:", userId);
+
+      // Create notification in database
+      await notificationService.createNotification(
+        userId,
+        order._id.toString(),
+        "ORDER_CREATED",
+        "Order Created 📦",
+        "Your order has been created successfully. Please proceed with payment.",
+        {
+          pickupCode: order.pickupCode,
+          pickupTime: order.pickupTime,
+          pickupDate: order.pickupDate.toISOString().split("T")[0],
+        }
+      );
+
+      // Send via WebSocket if available
+      if (wsService) {
+        await wsService.sendNotificationToUser(
+          userId,
+          "ORDER_CREATED",
+          "Order Created 📦",
+          "Your order has been created successfully. Please proceed with payment.",
+          order._id.toString(),
+          {
+            pickupCode: order.pickupCode,
+            pickupTime: order.pickupTime,
+            pickupDate: order.pickupDate.toISOString().split("T")[0],
+          }
+        );
+      }
+
+      console.log("ORDER_CREATED notification sent successfully");
+    } catch (error: any) {
+      console.error("Error sending notification:", error.message);
+    }
+
     // Clear cart only if order was created from cart
     if (cartItems.length > 0 && cartItems[0]._id) {
       await cartRepository.clearUserCart(userId);
@@ -199,9 +261,7 @@ export class OrderService {
       throw new HttpError(404, "Order not found");
     }
 
-    const orderUserId = (order.userId as any)._id
-      ? (order.userId as any)._id.toString()
-      : order.userId.toString();
+    const orderUserId = extractUserId(order.userId);
 
     if (orderUserId !== userId) {
       throw new HttpError(403, "Unauthorized to cancel this order");
@@ -216,9 +276,7 @@ export class OrderService {
 
     // Restore product quantities
     for (const item of order.items) {
-      const productId = (item.productId as any)._id
-        ? (item.productId as any)._id.toString()
-        : item.productId.toString();
+      const productId = extractUserId(item.productId);
 
       const product = await productRepository.getProductById(productId);
 
@@ -229,7 +287,49 @@ export class OrderService {
       }
     }
 
-    return await orderRepository.updateOrderStatus(id, "CANCELLED");
+    const cancelledOrder = await orderRepository.updateOrderStatus(
+      id,
+      "CANCELLED"
+    );
+
+    // CHECK IF UPDATE WAS SUCCESSFUL
+    if (!cancelledOrder) {
+      throw new HttpError(500, "Failed to cancel order");
+    }
+
+    // SEND ORDER CANCELLED NOTIFICATION
+    try {
+      await notificationService.createNotification(
+        userId,
+        id,
+        "ORDER_CANCELLED",
+        "Order Cancelled ❌",
+        `Your order has been cancelled. Reason: ${
+          data?.reason || "User requested"
+        }`,
+        {
+          pickupCode: cancelledOrder.pickupCode,
+        }
+      );
+
+      if (wsService) {
+        await wsService.sendNotificationToUser(
+          userId,
+          "ORDER_CANCELLED",
+          "Order Cancelled ❌",
+          `Your order has been cancelled. Reason: ${
+            data?.reason || "User requested"
+          }`,
+          id
+        );
+      }
+
+      console.log("ORDER_CANCELLED notification sent successfully");
+    } catch (error: any) {
+      console.error("Error sending cancellation notification:", error.message);
+    }
+
+    return cancelledOrder;
   }
 
   // Admin Methods
@@ -239,7 +339,77 @@ export class OrderService {
       throw new HttpError(404, "Order not found");
     }
 
-    return await orderRepository.updateOrderStatus(id, data.status);
+    const updatedOrder = await orderRepository.updateOrderStatus(
+      id,
+      data.status
+    );
+
+    // CHECK IF UPDATE WAS SUCCESSFUL
+    if (!updatedOrder) {
+      throw new HttpError(500, "Failed to update order status");
+    }
+
+    // SEND STATUS UPDATE NOTIFICATION
+    try {
+      const userId = extractUserId(order.userId);
+
+      let title = "";
+      let message = "";
+      let notificationType = "";
+
+      if (data.status === "READY_FOR_COLLECTION") {
+        title = "Ready for Collection 🎉";
+        message =
+          "Your order is ready! Come pick it up using your OTP and pickup code.";
+        notificationType = "READY_FOR_COLLECTION";
+      } else if (data.status === "COLLECTED") {
+        title = "Order Collected ✅";
+        message = "Thank you! Your order has been collected successfully.";
+        notificationType = "ORDER_COLLECTED";
+      } else if (data.status === "CANCELLED") {
+        title = "Order Cancelled ❌";
+        message = "Your order has been cancelled.";
+        notificationType = "ORDER_CANCELLED";
+      }
+
+      if (title && notificationType) {
+        await notificationService.createNotification(
+          userId,
+          id,
+          notificationType,
+          title,
+          message,
+          {
+            pickupCode: updatedOrder.pickupCode,
+            otp: updatedOrder.otp,
+            pickupTime: updatedOrder.pickupTime,
+            pickupDate: updatedOrder.pickupDate.toISOString().split("T")[0],
+          }
+        );
+
+        if (wsService) {
+          await wsService.sendNotificationToUser(
+            userId,
+            notificationType,
+            title,
+            message,
+            id,
+            {
+              pickupCode: updatedOrder.pickupCode,
+              otp: updatedOrder.otp,
+              pickupTime: updatedOrder.pickupTime,
+              pickupDate: updatedOrder.pickupDate.toISOString().split("T")[0],
+            }
+          );
+        }
+
+        console.log(`${notificationType} notification sent successfully`);
+      }
+    } catch (error: any) {
+      console.error("Error sending status notification:", error.message);
+    }
+
+    return updatedOrder;
   }
 
   async adminVerifyOtp(id: string, data: VerifyOtpDTOType) {
@@ -263,7 +433,47 @@ export class OrderService {
       );
     }
 
-    return await orderRepository.updateOrderStatus(id, "COLLECTED");
+    const collectedOrder = await orderRepository.updateOrderStatus(
+      id,
+      "COLLECTED"
+    );
+
+    // CHECK IF UPDATE WAS SUCCESSFUL
+    if (!collectedOrder) {
+      throw new HttpError(500, "Failed to collect order");
+    }
+
+    // SEND ORDER COLLECTED NOTIFICATION
+    try {
+      const userId = extractUserId(order.userId);
+
+      await notificationService.createNotification(
+        userId,
+        id,
+        "ORDER_COLLECTED",
+        "Order Collected ✅",
+        "Thank you! Your order has been collected successfully.",
+        {
+          pickupCode: collectedOrder.pickupCode,
+        }
+      );
+
+      if (wsService) {
+        await wsService.sendNotificationToUser(
+          userId,
+          "ORDER_COLLECTED",
+          "Order Collected ✅",
+          "Thank you! Your order has been collected successfully.",
+          id
+        );
+      }
+
+      console.log("ORDER_COLLECTED notification sent successfully");
+    } catch (error: any) {
+      console.error("Error sending collection notification:", error.message);
+    }
+
+    return collectedOrder;
   }
 
   async adminDeleteOrder(id: string) {

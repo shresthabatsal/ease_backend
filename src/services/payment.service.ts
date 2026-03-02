@@ -1,5 +1,6 @@
 import { PaymentRepository } from "../repositories/payment.repository";
 import { OrderRepository } from "../repositories/order.repository";
+import { NotificationService } from "./notification.service";
 import { HttpError } from "../errors/http.error";
 import {
   SubmitPaymentReceiptDTOType,
@@ -11,9 +12,31 @@ import { ProductModel } from "../models/product.model";
 
 const paymentRepository = new PaymentRepository();
 const orderRepository = new OrderRepository();
+const notificationService = new NotificationService();
+
+let wsService: any;
+
+export function setWebSocketService(ws: any) {
+  wsService = ws;
+}
 
 function generateOTP(): string {
   return Math.floor(100000 + Math.random() * 900000).toString();
+}
+
+// Helper function to extract userId
+function extractUserId(userField: any): string {
+  if (!userField) return "";
+  if (typeof userField === "string") {
+    return userField;
+  }
+  if (userField._id) {
+    return userField._id.toString();
+  }
+  if (userField.toString) {
+    return userField.toString();
+  }
+  return "";
 }
 
 export class PaymentService {
@@ -27,9 +50,7 @@ export class PaymentService {
       throw new HttpError(404, "Order not found");
     }
 
-    const orderUserId = (order.userId as any)._id
-      ? (order.userId as any)._id.toString()
-      : order.userId.toString();
+    const orderUserId = extractUserId(order.userId);
 
     if (orderUserId !== userId) {
       throw new HttpError(403, "Unauthorized access to order");
@@ -50,7 +71,7 @@ export class PaymentService {
       throw new HttpError(400, "Receipt image is required");
     }
 
-    const receiptImage = `/uploads/payments/${file.filename}`;
+    const receiptImage = `/uploads/users/${file.filename}`;
 
     const payment = await paymentRepository.createPayment({
       orderId: new mongoose.Types.ObjectId(data.orderId),
@@ -134,9 +155,12 @@ export class PaymentService {
     const orderId =
       payment.orderId instanceof mongoose.Types.ObjectId
         ? payment.orderId.toString()
-        : (payment.orderId as any)._id.toString();
+        : extractUserId(payment.orderId);
 
     const order = await orderRepository.getOrderById(orderId);
+    if (!order) {
+      throw new HttpError(404, "Order not found");
+    }
 
     if (data.status === "VERIFIED") {
       const otp = generateOTP();
@@ -151,12 +175,59 @@ export class PaymentService {
         }
       );
 
-      if (order) {
-        await orderRepository.updateOrder(order._id.toString(), {
-          paymentStatus: "VERIFIED",
-          status: "CONFIRMED",
-          otp: otp,
-        });
+      // ✅ CHECK IF UPDATE WAS SUCCESSFUL
+      if (!updatedPayment) {
+        throw new HttpError(500, "Failed to update payment status");
+      }
+
+      await orderRepository.updateOrder(order._id.toString(), {
+        paymentStatus: "VERIFIED",
+        status: "CONFIRMED",
+        otp: otp,
+      });
+
+      // ✅ SEND PAYMENT VERIFIED NOTIFICATION
+      try {
+        const userId = extractUserId(order.userId);
+
+        console.log("Sending PAYMENT_VERIFIED notification to user:", userId);
+
+        await notificationService.createNotification(
+          userId,
+          orderId,
+          "PAYMENT_VERIFIED",
+          "Payment Verified ✓",
+          "Your payment has been verified. Order confirmed!",
+          {
+            pickupCode: order.pickupCode,
+            otp: otp,
+            pickupTime: order.pickupTime,
+            pickupDate: order.pickupDate.toISOString().split("T")[0],
+          }
+        );
+
+        if (wsService) {
+          await wsService.sendNotificationToUser(
+            userId,
+            "PAYMENT_VERIFIED",
+            "Payment Verified ✓",
+            "Your payment has been verified. Order confirmed!",
+            orderId,
+            {
+              pickupCode: order.pickupCode,
+              otp: otp,
+              pickupTime: order.pickupTime,
+              pickupDate: order.pickupDate.toISOString().split("T")[0],
+            }
+          );
+        }
+
+        console.log("PAYMENT_VERIFIED notification sent successfully");
+      } catch (error: any) {
+        console.error(
+          "Error sending payment verified notification:",
+          error.message
+        );
       }
 
       return {
@@ -165,6 +236,7 @@ export class PaymentService {
         message: "Payment verified and OTP generated",
       };
     } else {
+      // REJECTED
       const updatedPayment = await paymentRepository.updatePaymentStatus(
         paymentId,
         {
@@ -175,11 +247,56 @@ export class PaymentService {
         }
       );
 
-      if (order) {
-        await orderRepository.updateOrder(order._id.toString(), {
-          paymentStatus: "FAILED",
-          otp: undefined,
-        });
+      // ✅ CHECK IF UPDATE WAS SUCCESSFUL
+      if (!updatedPayment) {
+        throw new HttpError(500, "Failed to update payment status");
+      }
+
+      await orderRepository.updateOrder(order._id.toString(), {
+        paymentStatus: "FAILED",
+        otp: undefined,
+      });
+
+      // ✅ SEND PAYMENT REJECTED NOTIFICATION
+      try {
+        const userId = extractUserId(order.userId);
+
+        console.log("Sending PAYMENT_REJECTED notification to user:", userId);
+
+        await notificationService.createNotification(
+          userId,
+          orderId,
+          "PAYMENT_REJECTED",
+          "Payment Rejected ✗",
+          `Your payment was rejected. Reason: ${
+            data.verificationNotes || "Please resubmit with a clearer receipt"
+          }`,
+          {
+            pickupCode: order.pickupCode,
+          }
+        );
+
+        if (wsService) {
+          await wsService.sendNotificationToUser(
+            userId,
+            "PAYMENT_REJECTED",
+            "Payment Rejected ✗",
+            `Your payment was rejected. Reason: ${
+              data.verificationNotes || "Please resubmit with a clearer receipt"
+            }`,
+            orderId,
+            {
+              pickupCode: order.pickupCode,
+            }
+          );
+        }
+
+        console.log("PAYMENT_REJECTED notification sent successfully");
+      } catch (error: any) {
+        console.error(
+          "Error sending payment rejected notification:",
+          error.message
+        );
       }
 
       return {
