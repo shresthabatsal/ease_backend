@@ -5,8 +5,6 @@ import { authorizedMiddleware } from "../middleware/auth.middleware";
 const router = Router();
 const productController = new ProductController();
 
-router.use(authorizedMiddleware);
-
 router.get("/", (req, res, next) =>
   productController.getAllProducts(req, res, next)
 );

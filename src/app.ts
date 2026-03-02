@@ -21,6 +21,9 @@ import paymentRouter from "./routes/payment.route";
 import userStoreRouter from "./routes/store.route";
 import userCategoryRouter from "./routes/category.route";
 
+import ratingRouter from "./routes/rating.route";
+import notificationRouter from "./routes/notification.route";
+
 const app = express();
 
 const corsOptions = {
@@ -58,5 +61,8 @@ app.use("/api/user/payments", paymentRouter);
 
 app.use("/api/user/stores", userStoreRouter);
 app.use("/api/user/categories", userCategoryRouter);
+
+app.use("/api/user/ratings", ratingRouter);
+app.use("/api/user/notification", notificationRouter);
 
 export default app;
