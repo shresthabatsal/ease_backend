@@ -2,6 +2,7 @@ import { Request, Response } from "express";
 import { UserService } from "../services/user.service";
 import { CreateUserDTO, LoginUserDTO, UpdateUserDTO } from "../dtos/user.dto";
 import z from "zod";
+import { GoogleAuthService } from "../services/google-auth.service";
 
 const userService = new UserService();
 
@@ -174,6 +175,35 @@ export class AuthController {
       return res.status(200).json({
         success: true,
         message: "Password has been reset successfully.",
+      });
+    } catch (error: any) {
+      return res.status(error.statusCode ?? 500).json({
+        success: false,
+        message: error.message || "Internal Server Error",
+      });
+    }
+  }
+
+  async googleAuth(req: Request, res: Response) {
+    try {
+      const { token } = req.body;
+
+      if (!token) {
+        return res.status(400).json({
+          success: false,
+          message: "Google token is required",
+        });
+      }
+
+      const googleData = await new GoogleAuthService().verifyGoogleToken(token);
+      const { token: jwtToken, user } =
+        await new GoogleAuthService().googleRegisterOrLogin(googleData);
+
+      return res.status(200).json({
+        success: true,
+        message: "Google authentication successful",
+        token: jwtToken,
+        data: user,
       });
     } catch (error: any) {
       return res.status(error.statusCode ?? 500).json({

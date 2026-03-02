@@ -5,9 +5,10 @@ const UserSchema: Schema = new Schema<UserType>(
   {
     fullName: { type: String, required: true },
     email: { type: String, required: true, unique: true },
-    phoneNumber: { type: String }, // optional
-    password: { type: String, required: true },
+    phoneNumber: { type: String },
+    password: { type: String },
     profilePictureUrl: { type: String },
+    googleId: { type: String, unique: true, sparse: true },
     role: {
       type: String,
       enum: ["USER", "ADMIN"],
@@ -21,6 +22,7 @@ const UserSchema: Schema = new Schema<UserType>(
 
 export interface IUser extends UserType, Document {
   _id: mongoose.Types.ObjectId;
+  googleId?: string;
   createdAt: Date;
   updatedAt: Date;
 }

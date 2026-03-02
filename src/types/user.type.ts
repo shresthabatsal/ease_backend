@@ -6,7 +6,8 @@ export const UserSchema = z.object({
   phoneNumber: z.string().optional(),
   password: z.string().min(6, "Password must be at least 6 characters."),
   role: z.enum(["USER", "ADMIN"]).default("USER"),
-  profilePictureUrl: z.string().optional()
+  profilePictureUrl: z.string().optional(),
+  googleId: z.string().optional(),
 });
 
 export type UserType = z.infer<typeof UserSchema>;
