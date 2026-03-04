@@ -18,6 +18,9 @@ import cartRouter from "./routes/cart.route";
 import orderRouter from "./routes/order.route";
 import paymentRouter from "./routes/payment.route";
 
+import ticketRouter from "./routes/ticket.route";
+import messageRouter from "./routes/message.route";
+
 import userStoreRouter from "./routes/store.route";
 import userCategoryRouter from "./routes/category.route";
 
@@ -58,6 +61,9 @@ app.use("/api/products", userProductRouter);
 app.use("/api/user/cart", cartRouter);
 app.use("/api/user/orders", orderRouter);
 app.use("/api/user/payments", paymentRouter);
+
+app.use("/api/support/tickets", ticketRouter);
+app.use("/api/support/messages", messageRouter);
 
 app.use("/api/user/stores", userStoreRouter);
 app.use("/api/user/categories", userCategoryRouter);
