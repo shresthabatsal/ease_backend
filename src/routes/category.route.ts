@@ -4,8 +4,6 @@ import { authorizedMiddleware } from "../middleware/auth.middleware";
 const router = Router();
 const categoryController = new CategoryController();
 
-router.use(authorizedMiddleware);
-
 router.get("/", (req, res, next) =>
   categoryController.getAllCategories(req, res, next)
 );

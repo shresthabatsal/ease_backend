@@ -14,7 +14,7 @@ export class CategoryService {
   ) {
     const categoryData: any = { ...data };
     if (file) {
-      categoryData.categoryImage = `/uploads/categories/${file.filename}`;
+      categoryData.categoryImage = `/uploads/users/${file.filename}`;
     }
     return await categoryRepository.createCategory(categoryData);
   }
@@ -42,7 +42,7 @@ export class CategoryService {
     }
     const updateData: any = { ...data };
     if (file) {
-      updateData.categoryImage = `/uploads/categories/${file.filename}`;
+      updateData.categoryImage = `/uploads/users/${file.filename}`;
     }
     return await categoryRepository.updateCategory(id, updateData);
   }
