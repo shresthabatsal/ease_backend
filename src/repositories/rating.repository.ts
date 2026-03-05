@@ -4,6 +4,7 @@ import { RatingModel, IRating } from "../models/rating.model";
 export interface IRatingRepository {
   createRating(data: Partial<IRating>): Promise<IRating>;
   getRatingById(id: string): Promise<IRating | null>;
+  getRatingByIdRaw(id: string): Promise<IRating | null>;
   getRatingsByProduct(productId: string): Promise<IRating[]>;
   getUserRatingForProduct(
     userId: string,
@@ -22,6 +23,10 @@ export class RatingRepository implements IRatingRepository {
 
   async getRatingById(id: string): Promise<IRating | null> {
     return await RatingModel.findById(id).populate("userId", "name email");
+  }
+
+  async getRatingByIdRaw(id: string): Promise<IRating | null> {
+    return await RatingModel.findById(id);
   }
 
   async getRatingsByProduct(productId: string): Promise<IRating[]> {

@@ -1,19 +1,24 @@
 import { Request, Response, NextFunction } from "express";
 import { RatingService } from "../services/rating.service";
+import { CreateRatingDTO, UpdateRatingDTO } from "../dtos/rating.dto";
 
 const ratingService = new RatingService();
 
 export class RatingController {
   async createRating(req: Request, res: Response, next: NextFunction) {
     try {
-      const { productId, rating, review } = req.body;
-      const userId = (req as any).user.id;
+      const parsedData = CreateRatingDTO.safeParse(req.body);
+
+      if (!parsedData.success) {
+        return res.status(400).json({
+          success: false,
+          message: parsedData.error.flatten().fieldErrors,
+        });
+      }
 
       const newRating = await ratingService.createRating(
-        userId,
-        productId,
-        rating,
-        review
+        req.user!._id.toString(),
+        parsedData.data
       );
 
       return res.status(201).json({
@@ -49,15 +54,19 @@ export class RatingController {
 
   async updateRating(req: Request, res: Response, next: NextFunction) {
     try {
-      const { ratingId } = req.params;
-      const { rating, review } = req.body;
-      const userId = (req as any).user.id;
+      const parsedData = UpdateRatingDTO.safeParse(req.body);
+
+      if (!parsedData.success) {
+        return res.status(400).json({
+          success: false,
+          message: parsedData.error.flatten().fieldErrors,
+        });
+      }
 
       const updatedRating = await ratingService.updateRating(
-        userId,
-        ratingId,
-        rating,
-        review
+        req.user!._id.toString(),
+        req.params.ratingId,
+        parsedData.data
       );
 
       return res.status(200).json({
@@ -75,10 +84,10 @@ export class RatingController {
 
   async deleteRating(req: Request, res: Response, next: NextFunction) {
     try {
-      const { ratingId } = req.params;
-      const userId = (req as any).user.id;
-
-      await ratingService.deleteRating(userId, ratingId);
+      await ratingService.deleteRating(
+        req.user!._id.toString(),
+        req.params.ratingId
+      );
 
       return res.status(200).json({
         success: true,
