@@ -192,20 +192,6 @@ export class PaymentService {
 
         console.log("Sending PAYMENT_VERIFIED notification to user:", userId);
 
-        await notificationService.createNotification(
-          userId,
-          orderId,
-          "PAYMENT_VERIFIED",
-          "Payment Verified ✓",
-          "Your payment has been verified. Order confirmed!",
-          {
-            pickupCode: order.pickupCode,
-            otp: otp,
-            pickupTime: order.pickupTime,
-            pickupDate: order.pickupDate.toISOString().split("T")[0],
-          }
-        );
-
         if (wsService) {
           await wsService.sendNotificationToUser(
             userId,
@@ -213,6 +199,20 @@ export class PaymentService {
             "Payment Verified ✓",
             "Your payment has been verified. Order confirmed!",
             orderId,
+            {
+              pickupCode: order.pickupCode,
+              otp: otp,
+              pickupTime: order.pickupTime,
+              pickupDate: order.pickupDate.toISOString().split("T")[0],
+            }
+          );
+        } else {
+          await notificationService.createNotification(
+            userId,
+            orderId,
+            "PAYMENT_VERIFIED",
+            "Payment Verified ✓",
+            "Your payment has been verified. Order confirmed!",
             {
               pickupCode: order.pickupCode,
               otp: otp,
@@ -263,19 +263,6 @@ export class PaymentService {
 
         console.log("Sending PAYMENT_REJECTED notification to user:", userId);
 
-        await notificationService.createNotification(
-          userId,
-          orderId,
-          "PAYMENT_REJECTED",
-          "Payment Rejected ✗",
-          `Your payment was rejected. Reason: ${
-            data.verificationNotes || "Please resubmit with a clearer receipt"
-          }`,
-          {
-            pickupCode: order.pickupCode,
-          }
-        );
-
         if (wsService) {
           await wsService.sendNotificationToUser(
             userId,
@@ -285,6 +272,19 @@ export class PaymentService {
               data.verificationNotes || "Please resubmit with a clearer receipt"
             }`,
             orderId,
+            {
+              pickupCode: order.pickupCode,
+            }
+          );
+        } else {
+          await notificationService.createNotification(
+            userId,
+            orderId,
+            "PAYMENT_REJECTED",
+            "Payment Rejected ✗",
+            `Your payment was rejected. Reason: ${
+              data.verificationNotes || "Please resubmit with a clearer receipt"
+            }`,
             {
               pickupCode: order.pickupCode,
             }

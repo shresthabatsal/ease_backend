@@ -192,21 +192,6 @@ export class OrderService {
     try {
       console.log("Sending ORDER_CREATED notification to user:", userId);
 
-      // Create notification in database
-      await notificationService.createNotification(
-        userId,
-        order._id.toString(),
-        "ORDER_CREATED",
-        "Order Created 📦",
-        "Your order has been created successfully. Please proceed with payment.",
-        {
-          pickupCode: order.pickupCode,
-          pickupTime: order.pickupTime,
-          pickupDate: order.pickupDate.toISOString().split("T")[0],
-        }
-      );
-
-      // Send via WebSocket if available
       if (wsService) {
         await wsService.sendNotificationToUser(
           userId,
@@ -214,6 +199,19 @@ export class OrderService {
           "Order Created 📦",
           "Your order has been created successfully. Please proceed with payment.",
           order._id.toString(),
+          {
+            pickupCode: order.pickupCode,
+            pickupTime: order.pickupTime,
+            pickupDate: order.pickupDate.toISOString().split("T")[0],
+          }
+        );
+      } else {
+        await notificationService.createNotification(
+          userId,
+          order._id.toString(),
+          "ORDER_CREATED",
+          "Order Created 📦",
+          "Your order has been created successfully. Please proceed with payment.",
           {
             pickupCode: order.pickupCode,
             pickupTime: order.pickupTime,
@@ -299,19 +297,6 @@ export class OrderService {
 
     // SEND ORDER CANCELLED NOTIFICATION
     try {
-      await notificationService.createNotification(
-        userId,
-        id,
-        "ORDER_CANCELLED",
-        "Order Cancelled ❌",
-        `Your order has been cancelled. Reason: ${
-          data?.reason || "User requested"
-        }`,
-        {
-          pickupCode: cancelledOrder.pickupCode,
-        }
-      );
-
       if (wsService) {
         await wsService.sendNotificationToUser(
           userId,
@@ -321,6 +306,19 @@ export class OrderService {
             data?.reason || "User requested"
           }`,
           id
+        );
+      } else {
+        await notificationService.createNotification(
+          userId,
+          id,
+          "ORDER_CANCELLED",
+          "Order Cancelled ❌",
+          `Your order has been cancelled. Reason: ${
+            data?.reason || "User requested"
+          }`,
+          {
+            pickupCode: cancelledOrder.pickupCode,
+          }
         );
       }
 
@@ -373,20 +371,6 @@ export class OrderService {
       }
 
       if (title && notificationType) {
-        await notificationService.createNotification(
-          userId,
-          id,
-          notificationType,
-          title,
-          message,
-          {
-            pickupCode: updatedOrder.pickupCode,
-            otp: updatedOrder.otp,
-            pickupTime: updatedOrder.pickupTime,
-            pickupDate: updatedOrder.pickupDate.toISOString().split("T")[0],
-          }
-        );
-
         if (wsService) {
           await wsService.sendNotificationToUser(
             userId,
@@ -394,6 +378,20 @@ export class OrderService {
             title,
             message,
             id,
+            {
+              pickupCode: updatedOrder.pickupCode,
+              otp: updatedOrder.otp,
+              pickupTime: updatedOrder.pickupTime,
+              pickupDate: updatedOrder.pickupDate.toISOString().split("T")[0],
+            }
+          );
+        } else {
+          await notificationService.createNotification(
+            userId,
+            id,
+            notificationType,
+            title,
+            message,
             {
               pickupCode: updatedOrder.pickupCode,
               otp: updatedOrder.otp,
@@ -447,17 +445,6 @@ export class OrderService {
     try {
       const userId = extractUserId(order.userId);
 
-      await notificationService.createNotification(
-        userId,
-        id,
-        "ORDER_COLLECTED",
-        "Order Collected ✅",
-        "Thank you! Your order has been collected successfully.",
-        {
-          pickupCode: collectedOrder.pickupCode,
-        }
-      );
-
       if (wsService) {
         await wsService.sendNotificationToUser(
           userId,
@@ -465,6 +452,17 @@ export class OrderService {
           "Order Collected ✅",
           "Thank you! Your order has been collected successfully.",
           id
+        );
+      } else {
+        await notificationService.createNotification(
+          userId,
+          id,
+          "ORDER_COLLECTED",
+          "Order Collected ✅",
+          "Thank you! Your order has been collected successfully.",
+          {
+            pickupCode: collectedOrder.pickupCode,
+          }
         );
       }
 

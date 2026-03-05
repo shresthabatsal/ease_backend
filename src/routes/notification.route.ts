@@ -17,14 +17,14 @@ router.get("/unread/count", (req, res, next) =>
   notificationController.getUnreadCount(req, res, next)
 );
 
-// Mark notification as read
-router.put("/:notificationId/read", (req, res, next) =>
-  notificationController.markAsRead(req, res, next)
-);
-
 // Mark all as read
 router.put("/mark-all/read", (req, res, next) =>
   notificationController.markAllAsRead(req, res, next)
+);
+
+// Mark notification as read
+router.put("/:notificationId/read", (req, res, next) =>
+  notificationController.markAsRead(req, res, next)
 );
 
 // Delete notification
